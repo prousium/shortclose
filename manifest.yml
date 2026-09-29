@@ -1,0 +1,29 @@
+---
+applications:
+  - name: sap-shortclose
+    memory: 256M
+    disk_quota: 512M
+    buildpack: nodejs_buildpack
+    command: node server.js
+
+    # Routing Strategy:
+    # 1. OPTION A (Default): Expose Web UI with a unique random route
+    random-route: true
+
+    # 2. OPTION B (Headless / Private): If you do NOT want any public route exposed on trial,
+    # comment out 'random-route: true' above and uncomment the two lines below:
+    # no-route: true
+    # health-check-type: process
+
+    env:
+      NODE_ENV: production
+      DRY_RUN: "false"
+      QUANTITY_THRESHOLD: "5.0"
+      TARGET_UNIT: "ZMT"
+      REJECTION_REASON_CODE: "81"
+      DEFAULT_DATE_FIELD: "CreationDate"
+      ROLLING_WINDOW_DAYS: "7"
+      # Sensitive credentials should preferably be set via 'cf set-env' (see README.md)
+      # SAP_BASE_HOST: my403214-api.s4hana.cloud.sap
+      # SAP_BASE_PATH: /sap/opu/odata/sap/API_SALES_ORDER_SRV/
+      # SAP_AUTH_HEADER: Basic <BASE64_CREDENTIALS>

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="SAP S/4HANA Sales Order Short-Close Management Dashboard">
+  <title>SAP Sales Order Short-Close Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="logo-mark">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+          </svg>
+        </div>
+        <div>
+          <h1 class="header-title">SAP Sales Order Short-Close</h1>
+          <p class="header-subtitle">Automated Line Item Cleanup for Open Orders (&le; 5 ZMT, SDProcessStatus='A')</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="badge badge-system" id="badgeHost">
+          <span class="status-indicator"></span>
+          <span>S/4HANA Cloud</span>
+        </div>
+        <div class="badge badge-outline">Unit: <strong>ZMT</strong></div>
+        <div class="badge badge-outline">Threshold: <strong>&le; 5.0</strong></div>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="main-content">
+      <!-- Search & Configuration Panel -->
+      <section class="card filter-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h2 class="card-title">Filter Criteria & Execution Parameters</h2>
+            <p class="card-description">Defaults to rolling last 7 days from today (CreationDate) or specify custom dates to test</p>
+          </div>
+          <div class="quick-presets">
+            <span class="preset-label">Presets:</span>
+            <button type="button" class="btn-preset active" id="btnPresetRolling" data-rolling="true">Last 7 Days (Default)</button>
+            <button type="button" class="btn-preset" data-from="2024-01-01" data-to="2024-03-31">Q1 2024</button>
+            <button type="button" class="btn-preset" data-from="2024-02-01" data-to="2024-03-31">Feb-Mar 2024</button>
+          </div>
+        </div>
+
+        <form id="filterForm" class="filter-form" onsubmit="return false;">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="fromDate" class="form-label">
+                <svg class="icon-inline" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                From Date
+              </label>
+              <input type="date" id="fromDate" class="form-input" required>
+              <span class="field-hint">CreationDate start (default: today - 7 days)</span>
+            </div>
+
+            <div class="form-group">
+              <label for="toDate" class="form-label">
+                <svg class="icon-inline" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                To Date
+              </label>
+              <input type="date" id="toDate" class="form-input" required>
+              <span class="field-hint">CreationDate end (default: today)</span>
+            </div>
+
+            <div class="form-group">
+              <label for="reasonCode" class="form-label">
+                <svg class="icon-inline" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></line>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                Rejection Reason Code
+              </label>
+              <input type="text" id="reasonCode" class="form-input code-input" value="81" maxlength="4" placeholder="81" required>
+              <span class="field-hint">Target SAP rejection code (default 81)</span>
+            </div>
+          </div>
+
+          <div class="action-bar">
+            <div class="action-info">
+              <span id="stateIndicator" class="state-pill">Ready to preview</span>
+            </div>
+            <div class="action-buttons">
+              <button type="button" id="btnPreview" class="btn btn-primary">
+                <svg class="btn-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <span>Preview</span>
+              </button>
+              <button type="button" id="btnExecute" class="btn btn-danger" disabled>
+                <svg class="btn-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                </svg>
+                <span>Execute Short-Close</span>
+              </button>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <!-- Alert / Status Banner -->
+      <div id="alertBanner" class="alert-banner hidden">
+        <div class="alert-icon" id="alertIcon"></div>
+        <div class="alert-content">
+          <div class="alert-title" id="alertTitle"></div>
+          <div class="alert-message" id="alertMessage"></div>
+        </div>
+        <button type="button" class="alert-close" id="alertClose" aria-label="Close message">&times;</button>
+      </div>
+
+      <!-- Skip Reasons & Metrics Summary -->
+      <section id="summarySection" class="summary-section hidden">
+        <div class="section-header-compact">
+          <h3 class="section-title">Evaluation Summary</h3>
+          <span class="badge badge-info" id="badgeScanCounts">0 orders / 0 items scanned</span>
+        </div>
+        <div class="metrics-grid">
+          <div class="metric-card metric-candidates">
+            <div class="metric-header">
+              <span class="metric-label">Eligible Candidates</span>
+              <span class="metric-icon-wrap icon-success">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+              </span>
+            </div>
+            <div class="metric-value" id="valEligibleCount">0</div>
+            <div class="metric-caption">&le; 5.0 ZMT Open items (SDProcessStatus='A')</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-header">
+              <span class="metric-label">Skipped: Non-ZMT</span>
+              <span class="metric-icon-wrap icon-neutral">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                </svg>
+              </span>
+            </div>
+            <div class="metric-value" id="valSkipNonZmt">0</div>
+            <div class="metric-caption">Different unit of measure</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-header">
+              <span class="metric-label">Skipped: &gt; 5.0 Qty</span>
+              <span class="metric-icon-wrap icon-warning">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="1" x2="12" y2="23"></line>
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+              </span>
+            </div>
+            <div class="metric-value" id="valSkipOverThreshold">0</div>
+            <div class="metric-caption">Exceeds threshold cutoff</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-header">
+              <span class="metric-label">Skipped: Not Open</span>
+              <span class="metric-icon-wrap icon-neutral">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 14 14"></polyline>
+                </svg>
+              </span>
+            </div>
+            <div class="metric-value" id="valSkipCompleted">0</div>
+            <div class="metric-caption">SDProcessStatus &ne; 'A'</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-header">
+              <span class="metric-label">Skipped: Already Rejected</span>
+              <span class="metric-icon-wrap icon-neutral">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                </svg>
+              </span>
+            </div>
+            <div class="metric-value" id="valSkipAlreadyRejected">0</div>
+            <div class="metric-caption">Rejection reason already set</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Eligible Preview Candidates Table -->
+      <section id="previewSection" class="card table-card hidden">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="flex-row items-center gap-2">
+              <h3 class="card-title">Eligible Line Items for Short-Close</h3>
+              <span class="counter-badge" id="previewCounter">0 items</span>
+            </div>
+            <p class="card-description">Review the items identified for short-closing before executing live updates.</p>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table" id="previewTable">
+            <thead>
+              <tr>
+                <th>Sales Order</th>
+                <th>Item</th>
+                <th>Material</th>
+                <th>Quantity</th>
+                <th>Unit</th>
+                <th>Order Date</th>
+                <th>Target Reason</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="previewTableBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+          <div id="previewEmptyState" class="empty-state hidden">
+            <div class="empty-icon">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M8 12h8"></path>
+              </svg>
+            </div>
+            <h4>No Qualifying Line Items Found</h4>
+            <p>No sales orders in the selected date range matched all short-close criteria (&lt; 5.0 ZMT, open status, no prior rejection).</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Live Execution Results Table -->
+      <section id="resultsSection" class="card table-card hidden">
+        <div class="card-header results-header">
+          <div class="card-title-group">
+            <div class="flex-row items-center gap-2">
+              <h3 class="card-title">Live Execution Results</h3>
+              <span class="counter-badge badge-results" id="resultsCounter">0 executed</span>
+            </div>
+            <p class="card-description" id="resultsSubtitle">Per-item SAP Gateway write and verification outcomes</p>
+          </div>
+          <div class="execution-stats-strip" id="execStatsStrip">
+            <span class="stat-pill stat-success"><strong id="statSuccessCount">0</strong> Succeeded</span>
+            <span class="stat-pill stat-failure"><strong id="statFailureCount">0</strong> Failed</span>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table" id="resultsTable">
+            <thead>
+              <tr>
+                <th>Outcome</th>
+                <th>Sales Order</th>
+                <th>Item</th>
+                <th>Material</th>
+                <th>Quantity</th>
+                <th>Unit</th>
+                <th>Reason Applied</th>
+                <th>SAP Gateway Response / Details</th>
+              </tr>
+            </thead>
+            <tbody id="resultsTableBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div>SAP S/4HANA Sales Order Short-Close Service</div>
+      <div class="footer-links">
+        <span>Target: <code>API_SALES_ORDER_SRV</code></span>
+        <span>&bull;</span>
+        <span>Rejection Flow: <code>POST + X-HTTP-Method: MERGE</code></span>
+      </div>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

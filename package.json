@@ -1,0 +1,31 @@
+{
+  "name": "sap-sales-order-shortclose",
+  "version": "1.0.0",
+  "description": "Node.js application to fetch SAP sales orders in a date range and automatically short-close items with quantity < 5 ZMT",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.js",
+    "job": "node job.js",
+    "job:dry-run": "node job.js --dry-run",
+    "cli": "node index.js",
+    "execute": "node index.js --execute",
+    "server": "node server.js",
+    "test:connection": "node scripts/test_connection.js",
+    "test:date-filter": "node scripts/test_date_filter.js",
+    "test:update-flow": "node scripts/test_update_flow.js",
+    "scan:reasons": "node scripts/scan_rejection_reasons.js",
+    "scan:items": "node scripts/inspect_open_items.js"
+  },
+  "keywords": [
+    "sap",
+    "s4hana",
+    "odata",
+    "sales-order",
+    "short-close"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
